@@ -48,8 +48,6 @@ const Login = ({ config: propsConfig, t, isDisabled }) => {
     try {
       const timestamp = Date.now();
 
-      
-
       const response = await fetch(`/user/api/captcha/image?timestamp=${timestamp}`, {
         method: "GET",
         credentials: "include",
@@ -73,7 +71,6 @@ const Login = ({ config: propsConfig, t, isDisabled }) => {
       setCaptchaImage(imageUrl);
       setCaptchaId(encryptedCaptchaId);
       setCaptchaValue("");
-
     } catch (error) {
       console.error("Failed to fetch captcha", error);
     }
@@ -92,11 +89,11 @@ const Login = ({ config: propsConfig, t, isDisabled }) => {
     if (user?.info?.roles?.length > 0) user.info.roles = filteredRoles;
     Digit.UserService.setUser(user);
     setEmployeeDetail(user?.info, user?.access_token);
-    let redirectPath = "/digit-ui/employee";
-
     /* logic to redirect back to same screen where we left off  */
+    let redirectPath = history.location.state?.from || "/digit-ui/employee";
+
     if (window?.location?.href?.includes("from=")) {
-      redirectPath = decodeURIComponent(window?.location?.href?.split("from=")?.[1]) || "/digit-ui/employee";
+      redirectPath = decodeURIComponent(window?.location?.href?.split("from=")?.[1]) || redirectPath;
     }
 
     /*  RAIN-6489 Logic to navigate to National DSS home incase user has only one role [NATADMIN]*/
@@ -106,6 +103,11 @@ const Login = ({ config: propsConfig, t, isDisabled }) => {
     /*  RAIN-6489 Logic to navigate to National DSS home incase user has only one role [NATADMIN]*/
     if (user?.info?.roles && user?.info?.roles?.length > 0 && user?.info?.roles?.every((e) => e.code === "STADMIN")) {
       redirectPath = "/digit-ui/employee/dss/landing/home";
+    }
+
+    // Ensure we don't redirect to login or other auth pages if we already have a user
+    if (redirectPath.includes("/user/login") || redirectPath.includes("/user/language-selection")) {
+      redirectPath = "/digit-ui/employee";
     }
 
     history.replace(redirectPath);
@@ -152,12 +154,15 @@ const Login = ({ config: propsConfig, t, isDisabled }) => {
 
       if (designation) {
         Digit.SessionStorage.set("Employee.designation", designation);
+        window.localStorage.setItem("Employee.designation", designation);
       }
       if (department) {
         Digit.SessionStorage.set("Employee.department", department);
+        window.localStorage.setItem("Employee.department", department);
       }
       if (zone) {
         Digit.SessionStorage.set("Employee.zone", zone);
+        window.localStorage.setItem("Employee.zone", zone);
       }
       const zon = Digit.SessionStorage.get("Employee.zone");
       console.log("=> ", zone);
@@ -201,9 +206,7 @@ const Login = ({ config: propsConfig, t, isDisabled }) => {
       e.preventDefault();
       const form = e.target.closest("form");
       if (form) {
-        form.dispatchEvent(
-          new Event("submit", { bubbles: true, cancelable: true })
-        );
+        form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
       }
     }
   };
